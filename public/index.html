@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+  
+    <title>Image | Testing</title>
+    <style type="text/css">
+    .thumb {
+    width: 24px;
+    height: 24px;
+    float: none;
+    position: relative;
+    top: 7px;
+}
+
+form .progress {
+    line-height: 15px;
+}
+
+.progress {
+    display: inline-block;
+    width: 100px;
+    border: 3px groove #CCC;
+}
+
+.progress div {
+    font-size: smaller;
+    background: orange;
+    width: 0;
+}
+    </style>
+  <script src="lib/angular/angular.js"></script> 
+  <script src="lib/ng-file-upload/dist/ng-file-upload.min.js"></script>
+  
+  </head>
+
+  
+  <body ng-app="fileUpload" ng-controller="MyCtrl">
+    <input type="text" ng-model="name" placeholder="name">
+  <h4>Upload on image select</h4>
+  <button type="file" ngf-select="uploadFiles($file, $invalidFiles)"
+        accept="image/*" ngf-pattern="image/*" ngf-max-size="6MB">
+      Select File</button>
+  <br><br>
+  <img data-ng-src="{{imgdata}}" data-err-src="img/passport.jpg" width="100" height="120" ng-show="showimg">
+  File:
+  <div style="font:smaller">{{f.name}} {{errFile.name}} {{errFile.$error}} {{errFile.$errorParam}}
+      <span class="progress" ng-show="f.progress >= 0">
+          <div style="width:{{f.progress}}%"  
+               ng-bind="f.progress + '%'"></div>
+      </span>
+  </div>     
+  {{errorMsg}}
+  <button ng-click="storenameandimage()" ng-disabled="dis">STore name and image</button>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Image</th>
+    </tr>
+    <tr ng-repeat="ob in data">
+      <td>{{ob.name}}</td>
+      <td> <img data-ng-src="{{ob.photo}}" data-err-src="img/passport.jpg" width="100" height="120"></td>
+    </tr>
+  </table>
+  <!-- Upload file to gridfs -->
+   <h4>Upload on image select</h4>
+  <button type="file" ngf-select="uploadFiles_video($file, $invalidFiles)"
+        accept="video/*" ngf-pattern="video/*" ngf-max-size="100MB">
+      Select Video File</button>
+  <br><br>
+  
+  File:
+  <div style="font:smaller">{{f.name}} {{errFile.name}} {{errFile.$error}} {{errFile.$errorParam}}
+      <span class="progress" ng-show="f.progress >= 0">
+          <div style="width:{{f.progress}}%"  
+               ng-bind="f.progress + '%'"></div>
+      </span>
+  </div>     
+  {{errorMsg}}
+  <!-- Upload file to gridfs -->
+  <!-- show video on button click-->
+  <button ng-click="showvideo()" >Show Video</button>
+  <video controls autoplay data-ng-src="{{fi}}"></video>
+  <!-- show video on button click-->
+
+  <script type="text/javascript">
+
+var app = angular.module('fileUpload', ['ngFileUpload']);
+
+app.controller('MyCtrl', function ($scope, Upload, $timeout,$http) {
+  /* $http.get('/getimageupload').then(function (data) {
+          if(data.data.length!=0)
+          {
+          $scope.data=data.data;
+          }
+        },function (data, status, headers, config) {
+                         alert('server error timeout');
+                     });*/
+  $scope.dis=true;
+    $scope.uploadFiles = function(file, errFiles) {
+       // $scope.f = file;
+       // $scope.errFile = errFiles && errFiles[0];
+        if (file) {
+          
+          var options=
+          { 
+            width: 100, 
+            height: 120,
+            quality: .8,
+            ratio: '1:2', 
+            centerCrop: true, 
+            pattern:'.jpg,.png,.jpeg,.JPG,.bmp',
+            restoreExif: false
+          };
+          Upload.resize(file, options).then(function(resizedFile){
+            Upload.base64DataUrl(resizedFile).then(function(urls){ 
+              console.log(urls);
+              $scope.imgdata=urls;
+              $scope.showimg=true;
+               $scope.dis=false;
+            });
+          });
+
+        }   
+    }
+$scope.storenameandimage=function()
+{
+          $http.post('/imageupload',
+          {
+            name:$scope.name,
+            photo:$scope.imgdata
+          }).then(function (data) {
+           console.log(data.data);
+        
+        },function (data, status, headers, config) {
+                         alert('server error timeout');
+                     });
+           
+}
+
+ $scope.uploadFiles_video = function(file, errFiles) {
+        $scope.f = file;
+        $scope.errFile = errFiles && errFiles[0];
+        if (file) {
+          
+///for storing large files in mongodb use gridfs
+              file.upload = Upload.upload({
+                url: '/upload',
+                data: {file: file}
+            });
+
+            file.upload.then(function (response) {
+              console.log(response)
+                $timeout(function () {
+                    file.result = response.data;
+                });
+            }, function (response) {
+              console.log(response)
+                if (response.status > 0)
+                    $scope.errorMsg = response.status + ': ' + response.data;
+            }, function (evt) {
+                file.progress = Math.min(100, parseInt(100.0 * 
+                                         evt.loaded / evt.total));
+            });
+        }   
+    }
+    //get video on button click--------------
+    $scope.showvideo=function()
+      {
+                $http.get('/getfile',{headers:{'range': "bytes=0-1024"}}).then(function (data) {
+                   console.log('Content-Range: ' + data.headers('Content-Range'));
+                 //console.log(data);
+                 $scope.fi="http://localhost:5000/getfile";
+                 //$scope.show=true;
+              
+              },function (data, status, headers, config) {
+                               alert('server error timeout');
+                           });
+                 
+      }
+    //---get video-------------------------
+});
+</script>
+</body>
+
+</html>
+
