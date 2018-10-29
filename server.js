@@ -36,8 +36,9 @@ storage = new GridFSStorage(
   { 
   	url: 'mongodb://localhost:27017/imageupload',
   	file: (req, file) => {
+      //console.log(file);
 		    return {
-		      filename: 'file_' + Date.now(),
+		      filename: file.originalname,
 		      bucketName: 'uploads'
 		    };
           }
@@ -48,6 +49,7 @@ var upload = multer({
 // Route for file upload
 app.post('/upload', (req, res) => {
     upload(req,res, (err) => {
+     
         if(err){
              res.json({error_code:1,err_desc:err});
              return;
@@ -68,13 +70,25 @@ app.get('/getimageupload',function(req,res){
                    });
 
      });
-app.get('/getfile',function(req,res){
+
+app.get('/getvideoupload',function(req,res){
+    gfs.collection('uploads'); //set collection name to lookup into
+          gfs.files.find({}).toArray(function (err, files) {
+          if (err) res.json(false);
+          res.json(files);
+        })
+ });
+
+
+app.get('/getfile/:video_id',function(req,res){
 	//console.log(req.body);
     gfs.collection('uploads'); //set collection name to lookup into
 
     /** First check if file exists */
-    gfs.files.findOne({filename: "file_1538329810153"},function(err, file){
+    console.log(req.params.video_id);
+    gfs.files.findOne({_id: mongojs.ObjectId(req.params.video_id)},function(err, file){
     	        if (err) {
+                console.log(err);
             return res.status(400).send({
                 err: errorHandler.getErrorMessage(err)
             });

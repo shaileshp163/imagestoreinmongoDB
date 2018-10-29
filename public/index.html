@@ -37,51 +37,66 @@ form .progress {
 
   
   <body ng-app="fileUpload" ng-controller="MyCtrl">
-    <input type="text" ng-model="name" placeholder="name">
+    <input type="text" ng-model="name" placeholder="Enter person Name">
   <h4>Upload on image select</h4>
-  <button type="file" ngf-select="uploadFiles($file, $invalidFiles)"
+  <button type="file" ngf-select="uploadFiles_image($file, $invalidFiles)"
         accept="image/*" ngf-pattern="image/*" ngf-max-size="6MB">
-      Select File</button>
-  <br><br>
-  <img data-ng-src="{{imgdata}}" data-err-src="img/passport.jpg" width="100" height="120" ng-show="showimg">
-  File:
+      Select Image File</button>
+       File:
   <div style="font:smaller">{{f.name}} {{errFile.name}} {{errFile.$error}} {{errFile.$errorParam}}
       <span class="progress" ng-show="f.progress >= 0">
           <div style="width:{{f.progress}}%"  
                ng-bind="f.progress + '%'"></div>
       </span>
   </div>     
+      <br>
+  <img data-ng-src="{{imgdata}}" data-err-src="img/passport.jpg" width="100" height="120" ng-show="showimg">
+ 
   {{errorMsg}}
-  <button ng-click="storenameandimage()" ng-disabled="dis">STore name and image</button>
-  <table>
+  <button ng-click="storenameandimage()" ng-disabled="dis">Store Name and Image</button>
+  <table ng-if="data1">
+    <caption>Image List</caption>
     <tr>
-      <th>Name</th>
-      <th>Image</th>
+      <th>Name of person</th>
+      <th>image</th>
     </tr>
-    <tr ng-repeat="ob in data">
+    <tr ng-repeat="ob in data1">
       <td>{{ob.name}}</td>
       <td> <img data-ng-src="{{ob.photo}}" data-err-src="img/passport.jpg" width="100" height="120"></td>
     </tr>
   </table>
+  <h6>================================================</h6>
   <!-- Upload file to gridfs -->
-   <h4>Upload on image select</h4>
+   <h4>Upload on Video select here</h4>
   <button type="file" ngf-select="uploadFiles_video($file, $invalidFiles)"
         accept="video/*" ngf-pattern="video/*" ngf-max-size="100MB">
       Select Video File</button>
-  <br><br>
-  
-  File:
-  <div style="font:smaller">{{f.name}} {{errFile.name}} {{errFile.$error}} {{errFile.$errorParam}}
-      <span class="progress" ng-show="f.progress >= 0">
-          <div style="width:{{f.progress}}%"  
-               ng-bind="f.progress + '%'"></div>
+      File:
+  <div style="font:smaller">{{ff.name}} {{errFile_s.name}} {{errFile_s.$error}} {{errFile_s.$errorParam}}
+      <span class="progress" ng-show="ff.progress >= 0">
+          <div style="width:{{ff.progress}}%"  
+               ng-bind="ff.progress + '%'"></div>
       </span>
-  </div>     
+  </div> 
+  <br><br>
+  <table ng-if="data">
+    <caption>Video List</caption>
+    <tr>
+      <th>Name of file</th>
+      <th>Video</th>
+    </tr>
+    <tr ng-repeat="ob in data">
+      <td>{{ob.filename}}</td>
+      <td><button ng-click="playvideo(ob._id)">Play</button></td>
+    </tr>
+  </table>
+   <video controls="controls" autoplay ng-src="{{video_url}}" width='500' height='300' ng-if="clicked">
+   </video>   
   {{errorMsg}}
   <!-- Upload file to gridfs -->
   <!-- show video on button click-->
-  <button ng-click="showvideo()" >Show Video</button>
-  <video controls autoplay data-ng-src="{{fi}}"></video>
+  
+  
   <!-- show video on button click-->
 
   <script type="text/javascript">
@@ -89,18 +104,40 @@ form .progress {
 var app = angular.module('fileUpload', ['ngFileUpload']);
 
 app.controller('MyCtrl', function ($scope, Upload, $timeout,$http) {
-  /* $http.get('/getimageupload').then(function (data) {
+//get all name of person and image for table
+function getimage(){
+      $http.get('/getimageupload').then(function (data) {
+          if(data.data.length!=0)
+          {
+          $scope.data1=data.data;
+          }
+        },function (data, status, headers, config) {
+                         alert('server error timeout');
+                     });
+  }
+
+//get all name of video and video for table
+function getvideo()
+{
+  $http.get('/getvideoupload').then(function (data) {
           if(data.data.length!=0)
           {
           $scope.data=data.data;
           }
         },function (data, status, headers, config) {
                          alert('server error timeout');
-                     });*/
-  $scope.dis=true;
-    $scope.uploadFiles = function(file, errFiles) {
-       // $scope.f = file;
-       // $scope.errFile = errFiles && errFiles[0];
+                     });
+}
+//called function for first time to load privious data
+getimage();
+getvideo();
+
+
+ $scope.dis=true;
+
+$scope.uploadFiles_image = function(file, errFiles) {
+        $scope.f = file;
+        $scope.errFile = errFiles && errFiles[0];
         if (file) {
           
           var options=
@@ -115,7 +152,7 @@ app.controller('MyCtrl', function ($scope, Upload, $timeout,$http) {
           };
           Upload.resize(file, options).then(function(resizedFile){
             Upload.base64DataUrl(resizedFile).then(function(urls){ 
-              console.log(urls);
+              //console.log(urls);
               $scope.imgdata=urls;
               $scope.showimg=true;
                $scope.dis=false;
@@ -131,32 +168,41 @@ $scope.storenameandimage=function()
             name:$scope.name,
             photo:$scope.imgdata
           }).then(function (data) {
-           console.log(data.data);
-        
+          // console.log(data.data);
+           getimage();
+           $scope.showimg=false;
+               $scope.dis=true;
+               $scope.f = {};
+               $scope.errFile= {};
         },function (data, status, headers, config) {
                          alert('server error timeout');
                      });
            
 }
 
+///for storing large files like videos in mongodb use gridfs
+
  $scope.uploadFiles_video = function(file, errFiles) {
-        $scope.f = file;
-        $scope.errFile = errFiles && errFiles[0];
+        $scope.ff = file;
+        $scope.errFile_s = errFiles && errFiles[0];
         if (file) {
           
-///for storing large files in mongodb use gridfs
+
               file.upload = Upload.upload({
                 url: '/upload',
                 data: {file: file}
             });
 
             file.upload.then(function (response) {
-              console.log(response)
+              //console.log(response)
                 $timeout(function () {
                     file.result = response.data;
                 });
+                getvideo();
+                $scope.ff = {};
+                $scope.errFile_s={};
             }, function (response) {
-              console.log(response)
+             // console.log(response)
                 if (response.status > 0)
                     $scope.errorMsg = response.status + ': ' + response.data;
             }, function (evt) {
@@ -165,22 +211,35 @@ $scope.storenameandimage=function()
             });
         }   
     }
-    //get video on button click--------------
-    $scope.showvideo=function()
+     //get video on button click--------------
+      $scope.playvideo=function(video_id)
       {
-                $http.get('/getfile',{headers:{'range': "bytes=0-1024"}}).then(function (data) {
+        $scope.clicked=true;
+        $scope.video_url='/getfile/'+video_id;
+      }
+    //---get video end-------------------------
+
+
+   /* $scope.showvideo=function(video_id)
+      {console.log("clicked");
+                $http.get('/getfile/'+video_id,{headers:{'range': "bytes=0-1024"}}).then(function (data) {
                    console.log('Content-Range: ' + data.headers('Content-Range'));
                  //console.log(data);
-                 $scope.fi="http://localhost:5000/getfile";
+                 $scope.fi="http://localhost:5000/getfile"+video_id;
                  //$scope.show=true;
               
               },function (data, status, headers, config) {
                                alert('server error timeout');
                            });
                  
-      }
-    //---get video-------------------------
+      }*/
+
 });
+/*app.filter("trustUrl", ['$sce', function ($sce) {
+        return function (recordingUrl) {
+            return $sce.trustAsResourceUrl(recordingUrl);
+        };
+    }]);*/
 </script>
 </body>
 
